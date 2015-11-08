@@ -254,7 +254,7 @@ namespace System.IO.Packaging
                    || String.CompareOrdinal(_subType, String.Empty) != 0);
 
                 StringBuilder stringBuilder = new StringBuilder(_type);
-                stringBuilder.Append(s_forwardSlashSeparator[0]);
+                stringBuilder.Append(PackUriHelper.ForwardSlashChar);
                 stringBuilder.Append(_subType);
 
                 if (_parameterDictionary != null && _parameterDictionary.Count > 0)
@@ -397,7 +397,7 @@ namespace System.IO.Packaging
             //okay to trim at this point the end of the string as Linear White Spaces(LWS) chars are allowed here.
             typeAndSubType = typeAndSubType.TrimEnd(s_linearWhiteSpaceChars);
 
-            string[] splitBasedOnForwardSlash = typeAndSubType.Split(s_forwardSlashSeparator);
+            string[] splitBasedOnForwardSlash = typeAndSubType.Split(PackUriHelper.ForwardSlashCharSeparator);
 
             if (splitBasedOnForwardSlash.Length != 2)
                 throw new ArgumentException(SR.InvalidTypeSubType);
@@ -687,8 +687,6 @@ namespace System.IO.Packaging
            '.' /*46*/, '^' /*94*/ , '_'  /*95*/,
            '`' /*96*/, '|' /*124*/, '~'  /*126*/,
          };
-
-        private static readonly char[] s_forwardSlashSeparator = { '/' };
 
         //Linear White Space characters
         private static readonly char[] s_linearWhiteSpaceChars =

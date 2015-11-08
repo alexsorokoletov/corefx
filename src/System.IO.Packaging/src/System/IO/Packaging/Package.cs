@@ -942,41 +942,34 @@ namespace System.IO.Packaging
         public static Package Open(Stream stream, FileMode packageMode, FileAccess packageAccess)
         {
             Package package = null;
+            if (stream == null)
+                throw new ArgumentNullException("stream");
+
             try
             {
-                if (stream == null)
-                    throw new ArgumentNullException("stream");
+                // Today the Open(Stream) method is purely used for streams of Zip file format as
+                // that is the default underlying file format mapper implemented.
 
-                try
-                {
-                    // Today the Open(Stream) method is purely used for streams of Zip file format as
-                    // that is the default underlying file format mapper implemented.
+                package = new ZipPackage(stream, packageMode, packageAccess);
 
-                    package = new ZipPackage(stream, packageMode, packageAccess);
-
-                    //We need to get all the parts if any exists from the underlying file
-                    //so that we have the names in the Normalized form in our in-memory
-                    //data structures.
-                    //Note: If ever this call is removed, each individual call to GetPartCore,
-                    //may result in undefined behavior as the underlying ZipArchive, maintains the
-                    //files list as being case-sensitive.
-                    if (package.FileOpenAccess == FileAccess.ReadWrite || package.FileOpenAccess == FileAccess.Read)
-                        package.GetParts();
-                }
-                catch
-                {
-                    if (package != null)
-                    {
-                        package.Close();
-                    }
-
-                    throw;
-                }
+                //We need to get all the parts if any exists from the underlying file
+                //so that we have the names in the Normalized form in our in-memory
+                //data structures.
+                //Note: If ever this call is removed, each individual call to GetPartCore,
+                //may result in undefined behavior as the underlying ZipArchive, maintains the
+                //files list as being case-sensitive.
+                if (package.FileOpenAccess == FileAccess.ReadWrite || package.FileOpenAccess == FileAccess.Read)
+                    package.GetParts();
             }
-            finally
+            catch
             {
-            }
+                if (package != null)
+                {
+                    package.Close();
+                }
 
+                throw;
+            }
             return package;
         }
 

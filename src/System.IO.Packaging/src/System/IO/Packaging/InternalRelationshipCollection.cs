@@ -322,14 +322,16 @@ namespace System.IO.Packaging
                                         if (!reader.IsEmptyElement)
                                             ProcessEndElementForRelationshipTag(reader);
                                     }
-                                    else throw new XmlException(SR.RelationshipTagDoesntMatchSchema, null, reader.LineNumber, reader.LinePosition);
+                                    else 
+                                        throw new XmlException(SR.RelationshipTagDoesntMatchSchema, null, reader.LineNumber, reader.LinePosition);
                                 }
                                 else
                                     if (!(String.CompareOrdinal(s_relationshipsTagName, reader.LocalName) == 0 && (reader.NodeType == XmlNodeType.EndElement)))
-                                    throw new XmlException(SR.UnknownTagEncountered, null, reader.LineNumber, reader.LinePosition);
+                                        throw new XmlException(SR.UnknownTagEncountered, null, reader.LineNumber, reader.LinePosition);
                             }
                         }
-                        else throw new XmlException(SR.ExpectedRelationshipsElementTag, null, reader.LineNumber, reader.LinePosition);
+                        else 
+                            throw new XmlException(SR.ExpectedRelationshipsElementTag, null, reader.LineNumber, reader.LinePosition);
                     }
                 }
             }

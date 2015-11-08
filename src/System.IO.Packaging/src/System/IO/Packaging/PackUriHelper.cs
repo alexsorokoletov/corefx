@@ -119,7 +119,7 @@ namespace System.IO.Packaging
             absolutePackageUri = EscapeSpecialCharacters(absolutePackageUri);
 
             // Step 4 - Replace all '/' with ',' in the resulting string
-            absolutePackageUri = absolutePackageUri.Replace('/', ',');
+            absolutePackageUri = absolutePackageUri.Replace(ForwardSlashChar, ',');
 
             // Step 5 - Append pack:// at the begining and a '/' at the end of the pack uri obtained so far            
             absolutePackageUri = String.Concat(PackUriHelper.UriSchemePack, "://", absolutePackageUri);
@@ -721,16 +721,13 @@ namespace System.IO.Packaging
         /// <returns></returns>
         private static string EscapeSpecialCharacters(string path)
         {
-            string characterString;
-
             // Escaping for the following - '%'; '@'; ',' and '?'
             // !!Important!! - The order is important - The '%' sign should be escaped first.
             // This is currently enforced by the order of characters in the _specialCharacters array
             foreach (char c in s_specialCharacters)
             {
-                characterString = c.ToString();
-                if (path.Contains(characterString))
-                    path = path.Replace(characterString, HexEscape(c));
+                if (path.IndexOf(c) != -1)
+                    path = path.Replace(c.ToString(), HexEscape(c));
             }
 
             return path;
@@ -756,7 +753,7 @@ namespace System.IO.Packaging
             if (partName == String.Empty)
                 return new ArgumentException(SR.PartUriIsEmpty);
 
-            if (partName[0] != '/')
+            if (partName[0] != ForwardSlashChar)
                 return new ArgumentException(SR.PartUriShouldStartWithForwardSlash);
 
             argumentException = GetExceptionIfPartNameStartsWithTwoSlashes(partName);
@@ -788,7 +785,7 @@ namespace System.IO.Packaging
             //to verify the uri correctly.
             //We perform the comparison in a case-insensitive manner, as at this point,
             //only escaped hex digits (A-F) might vary in casing.
-            if (String.CompareOrdinal(partUri.OriginalString.ToUpperInvariant(), wellFormedPartName.ToUpperInvariant()) != 0)
+            if (!String.Equals(partUri.OriginalString, wellFormedPartName, StringComparison.OrdinalIgnoreCase))
                 return new ArgumentException(SR.InvalidPartUri);
 
             //if we get here, the partUri is valid and so we return null, as there is no exception.
@@ -837,7 +834,7 @@ namespace System.IO.Packaging
         {
             if (partName.Length > 0)
             {
-                if (partName[partName.Length - 1] == '/')
+                if (partName[partName.Length - 1] == ForwardSlashChar)
                     return new ArgumentException(SR.PartUriShouldNotEndWithForwardSlash);
             }
             return null;
@@ -860,7 +857,7 @@ namespace System.IO.Packaging
         {
             if (partName.Length > 1)
             {
-                if (partName[0] == '/' && partName[1] == '/')
+                if (partName[0] == ForwardSlashChar && partName[1] == ForwardSlashChar)
                     return new ArgumentException(SR.PartUriShouldNotStartWithTwoForwardSlashes);
             }
             return null;
@@ -923,10 +920,7 @@ namespace System.IO.Packaging
             // Uri.GetComponents may return a single forward slash when there is no absolute path.  
             // This is Whidbey PS399695.  Until that is changed, we check for both cases - either an entirely empty string,
             // or a single forward slash character.  Either case means there is no part name.
-            if (partName.Length == 0 || ((partName.Length == 1) && (partName[0] == '/')))
-                return true;
-            else
-                return false;
+            return (partName.Length == 0 || ((partName.Length == 1) && (partName[0] == ForwardSlashChar)));
         }
 
         //This method validates and returns the PackageUri component
@@ -938,7 +932,7 @@ namespace System.IO.Packaging
             String hostAndPort = packUri.GetComponents(UriComponents.HostAndPort, UriFormat.UriEscaped);
 
             //Step 2 - Replace the ',' with '/' to reconstruct the package URI
-            hostAndPort = hostAndPort.Replace(',', '/');
+            hostAndPort = hostAndPort.Replace(',', ForwardSlashChar);
 
             //Step 3 - Unescape the special characters that we had escaped to construct the packUri
             Uri packageUri = new Uri(Uri.UnescapeDataString(hostAndPort));
@@ -976,7 +970,7 @@ namespace System.IO.Packaging
         private static readonly Uri s_defaultUri = new Uri("http://defaultcontainer/");
 
         //we use this dummy Uri to represent the root of the container.
-        private static readonly Uri s_packageRootUri = new Uri("/", UriKind.Relative);
+        private static readonly Uri s_packageRootUri = new Uri(ForwardSlashString, UriKind.Relative);
 
         // We need to perform Escaping for the following - '%'; '@'; ',' and '?' 
         // !!Important!! - The order is important - The '%' sign should be escaped first.
@@ -988,7 +982,13 @@ namespace System.IO.Packaging
         private static readonly string s_relationshipPartExtensionName = ".rels";
 
         // Forward Slash
-        internal static readonly char ForwardSlashChar = '/';
+        internal const char ForwardSlashChar = '/';
+        
+        internal const string ForwardSlashString = "/";
+        
+        // Forward Slash for separating strings
+        //Required for creating a part name from a zip item name
+        internal static readonly char[] ForwardSlashCharSeparator = new char [] { ForwardSlashChar }; 
 
         // Backward Slash
         internal static readonly char BackwardSlashChar = '\\';
@@ -1022,7 +1022,7 @@ namespace System.IO.Packaging
             #region Internal Constructors
 
             internal ValidatedPartUri(string partUriString)
-                : this(partUriString, false /*isNormalized*/, true /*computeIsRelationship*/, false /*dummy value as we will compute it later*/)
+                : this(partUriString, isNormalized: false, computeIsRelationship: true, isRelationshipPartUri: false /*dummy value as we will compute it later*/)
             {
             }
 
@@ -1030,8 +1030,8 @@ namespace System.IO.Packaging
             //or no. One place this is used is while creating a normalized uri for a part Uri
             //This will optimize the code and we will not have to parse the Uri to find out
             //if it is a relationship part uri
-            internal ValidatedPartUri(string partUriString, bool isRelationshipUri)
-                : this(partUriString, false /*isNormalized*/, false /*computeIsRelationship*/, isRelationshipUri)
+            internal ValidatedPartUri(string partUriString, bool isRelationshipPartUri)
+                : this(partUriString, isNormalized: false, computeIsRelationship: false, isRelationshipPartUri: isRelationshipPartUri)
             {
             }
 
@@ -1199,7 +1199,7 @@ namespace System.IO.Packaging
                 // of .rels.  The folder must also be the last "folder".
                 // Comparing using the normalized string to reduce the number of ToUpperInvariant operations
                 // required for case-insensitive comparison
-                string[] segments = NormalizedPartUriString.Split(s_forwardSlashSeparator); //new Uri(_defaultUri, this).Segments; //partUri.Segments cannot be called on a relative Uri;
+                string[] segments = NormalizedPartUriString.Split(ForwardSlashCharSeparator); //new Uri(_defaultUri, this).Segments; //partUri.Segments cannot be called on a relative Uri;
 
                 // String.Split, will always return an empty string as the
                 // first member in the array as the string starts with a "/"
@@ -1293,8 +1293,6 @@ namespace System.IO.Packaging
                                                                                                          true /*isnormalized*/,
                                                                                                          false /*computeIsRelationship*/,
                                                                                                          true /*IsRelationship*/);
-
-            private static readonly char[] s_forwardSlashSeparator = { '/' };
 
             #endregion Private Methods
 
